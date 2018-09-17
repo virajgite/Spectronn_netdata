@@ -1,0 +1,149 @@
+
+
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Historic Data</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.min.js" type="text/javascript"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.min.js" type="text/javascript"></script>
+</head>
+
+
+<script>
+
+    var formattedTime;
+    function timeConverter(UNIX_timestamp){
+        // Create a new JavaScript Date object based on the timestamp
+// multiplied by 1000 so that the argument is in milliseconds, not seconds.
+        var date = new Date(UNIX_timestamp*1000);
+// Hours part from the timestamp
+        var hours = date.getHours();
+// Minutes part from the timestamp
+        var minutes = "0" + date.getMinutes();
+// Seconds part from the timestamp
+        var seconds = "0" + date.getSeconds();
+
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var year = date.getFullYear();
+        var month = months[date.getMonth()];
+        var display_date = date.getDate();
+
+
+// Will display time in 10:30:23 format
+        formattedTime = display_date+" "+month+" "+year+" "+hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+        return formattedTime;
+    }
+
+
+
+
+    var historic_data,chart_data,latest_timestamp,least_timestamp;
+    var a; //for holding index of least timestamp
+    var set_history=4; //for setInterval function
+    var time_list = [], load1 = [], load5 = [], load15 = [];
+
+    function api_historic(history) {
+
+        var URL = 'http://www.virajgite.com/static/netdata_systemload_service.json';
+        fetch(URL)
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (myJson) {
+
+                historic_data = myJson;
+                latest_timestamp = historic_data.data[0][0];
+                //document.write(latest_timestamp);
+                //document.write(latest_timestamp);
+            });
+
+        least_timestamp = latest_timestamp - (history * 60 * 60);
+        console.log(latest_timestamp);
+        console.log(least_timestamp);
+
+
+        a = (history * 60 * 60) / 5;
+        if (a < historic_data.data.length){
+            chart_data = historic_data.data.slice(0, a);
+        }
+        else{
+            a=historic_data.data.length;
+            chart_data = historic_data.data.slice(0, a);
+        }
+
+        console.log('a is :' + a);
+
+
+
+
+        time_list=[];
+        load1=[];
+        load5=[];
+        load15=[];
+
+
+
+        for (var i=0; i < a; i++) {
+            time_list.push(timeConverter(chart_data[i][0]));
+            load1.push(chart_data[i][1]);
+            load5.push(chart_data[i][2]);
+            load15.push(chart_data[i][3]);
+        }
+
+        chart_historic();
+    }
+
+    function chart_historic(){
+
+        var ctx = document.getElementById("myChart");
+        var myChart = new Chart(ctx, {
+
+            type: 'line',
+            data: {
+                labels: time_list.reverse(),
+                datasets: [{label: 'load1', data: load1.reverse(), borderColor: 'rgb(255,0,0)'}, {
+                    label: 'load5',
+                    data: load5.reverse(),
+                    borderColor: 'rgb(0,255,0)'
+                }, {label: 'load15', data: load15.reverse(), borderColor: 'rgb(0,0,255)'}]
+            },
+            options: {
+                animation: {
+                    duration: 1 // general animation time
+                },
+                elements: {
+                    point: {
+                        radius: 0
+
+                    }
+                }
+            }
+        });
+
+    }
+
+
+
+</script>
+
+
+<body>
+
+<h3>System Load ( ~Historic~ )</h3>
+<p>Please wait for the graph to load, then click buttons for respective plots</p>
+<a href="pie">click here for pie n bar charts</a>
+
+<button onclick="set_history=6;">6hours</button>
+<button onclick="set_history=12;">12hours</button>
+<button onclick="set_history=24;">24hours</button>
+
+<canvas id="myChart"></canvas>
+
+</body>
+
+<script>
+
+    setInterval( function() { api_historic(set_history); }, 3000 );
+</script>
+</html>
